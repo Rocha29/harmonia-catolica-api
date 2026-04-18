@@ -1,0 +1,174 @@
+// Harmonia Católica - Schema Prisma (SQLite)
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ====== USUARIOS ======
+model Usuario {
+  id              String @id @default(cuid())
+  email           String @unique
+  nome            String
+  senhaHash       String?
+  perfilMissa     String // "solene" | "carismatico"
+  paroquia        String?
+  instrumento     String?
+  classeVocal     String?
+  fotoPerfil      String?
+  bio             String?
+  ativo           Boolean @default(true)
+  firebaseUID     String? @unique
+  criadoEm        DateTime @default(now())
+  atualizadoEm    DateTime @updatedAt
+
+  grupos          UsuarioGrupo[]
+  gruposComoMaestro Grupo[] @relation("MaestroGrupo")
+  setlists        Setlist[]
+  favoritos       Canto[] @relation("FavoritoCantos")
+  avaliacoes      AvaliacaoCanto[]
+}
+
+// ====== CANTOS ======
+model Canto {
+  id              String @id @default(cuid())
+  titulo          String
+  compositor      String
+  estilo          String // "solene" | "carismatico" | "ambos"
+  dificuldade     String // "basico" | "intermediario" | "avancado"
+  instrumento     String
+  tom             String
+  duracao         Int
+  letra           String
+  cifra           String
+  linkAudio       String?
+  linkVideo       String?
+  tempoLiturgico  String? // JSON
+  momentoMissa    String // "entrada", "gloria", "aleluia", "comunhao", "saida"
+  notas           String?
+  criadoEm        DateTime @default(now())
+  atualizadoEm    DateTime @updatedAt
+
+  setlistCantos   SetlistCanto[]
+  favoritos       Usuario[] @relation("FavoritoCantos")
+  avaliacoes      AvaliacaoCanto[]
+}
+
+// ====== AVALIACOES ======
+model AvaliacaoCanto {
+  id              String @id @default(cuid())
+  usuario         Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  usuarioId       String
+  canto           Canto @relation(fields: [cantoId], references: [id], onDelete: Cascade)
+  cantoId         String
+  rating          Int // 1-5
+  comentario      String?
+  criadoEm        DateTime @default(now())
+  atualizadoEm    DateTime @updatedAt
+
+  @@unique([usuarioId, cantoId])
+}
+
+// ====== GRUPOS ======
+model Grupo {
+  id              String @id @default(cuid())
+  nome            String
+  tipo            String // "coral" | "oracao"
+  descricao       String?
+  maestro         Usuario @relation("MaestroGrupo", fields: [maestroId], references: [id])
+  maestroId       String
+  paroquia        String?
+  cidade          String?
+  estado          String?
+  foto            String?
+  ativo           Boolean @default(true)
+  criadoEm        DateTime @default(now())
+  atualizadoEm    DateTime @updatedAt
+
+  membros         UsuarioGrupo[]
+  setlists        Setlist[]
+}
+
+model UsuarioGrupo {
+  id              String @id @default(cuid())
+  usuario         Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  usuarioId       String
+  grupo           Grupo @relation(fields: [grupoId], references: [id], onDelete: Cascade)
+  grupoId         String
+  papel           String // "maestro" | "solista" | "membro"
+  adicionadoEm    DateTime @default(now())
+
+  @@unique([usuarioId, grupoId])
+}
+
+// ====== SETLISTS ======
+model Setlist {
+  id              String @id @default(cuid())
+  titulo          String
+  data            DateTime
+  estilo          String // "solene" | "carismatico"
+  duracao         Int? // em segundos
+  usuario         Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  usuarioId       String
+  grupo           Grupo? @relation(fields: [grupoId], references: [id], onDelete: SetNull)
+  grupoId         String?
+  linkPublico     String @unique
+  notas           String?
+  criadoEm        DateTime @default(now())
+  atualizadoEm    DateTime @updatedAt
+
+  cantos          SetlistCanto[]
+}
+
+model SetlistCanto {
+  id              String @id @default(cuid())
+  setlist         Setlist @relation(fields: [setlistId], references: [id], onDelete: Cascade)
+  setlistId       String
+  canto           Canto @relation(fields: [cantoId], references: [id])
+  cantoId         String
+  ordem           Int
+  tom             String?
+  notas           String?
+  criadoEm        DateTime @default(now())
+
+  @@unique([setlistId, cantoId])
+  @@index([setlistId])
+}
+
+// ====== CALENDARIO LITURGICO ======
+model DiaLiturgico {
+  id              String @id @default(cuid())
+  data            DateTime @unique
+  ciclo           String // "A", "B", "C"
+  tempo           String // "Quaresma", "Páscoa", etc
+  domingo         Int
+  festa           String?
+  graue           String?
+  leitura1        String?
+  salmo           String?
+  leitura2        String?
+  evangelho       String?
+  aleluia         String?
+  notas           String?
+  cantosSolene    String? // JSON array
+  cantosCarismatico String? // JSON array
+  criadoEm        DateTime @default(now())
+  atualizadoEm    DateTime @updatedAt
+}
+
+// ====== MARKETPLACE (Phase 3+) ======
+model Composicao {
+  id              String @id @default(cuid())
+  titulo          String
+  compositor      String
+  descricao       String?
+  arquivo         String
+  preco           Float
+  ativo           Boolean @default(true)
+  vendas          Int @default(0)
+  criadoEm        DateTime @default(now())
+  atualizadoEm    DateTime @updatedAt
+}
