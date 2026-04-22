@@ -13,10 +13,12 @@ app.use(express.json());
 const authRouter = require('./routes/auth').default;
 const calendarioRouter = require('./routes/calendario').default;
 const cantosRouter = require('./routes/cantos').default;
+const setlistsRouter = require('./routes/setlists').default;
 
 app.use('/api/auth', authRouter);
 app.use('/api/calendario', calendarioRouter);
 app.use('/api/cantos', cantosRouter);
+app.use('/api/setlists', setlistsRouter);
 
 // Health check endpoint
 app.get('/api/health', (req: any, res: any) => {
