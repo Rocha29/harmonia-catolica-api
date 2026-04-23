@@ -1,20 +1,9 @@
 import { Router } from 'express';
 import { PrismaClient } from '@prisma/client';
+import { verificarAuth } from '../middleware/auth';
 
 const prisma = new PrismaClient();
 const router = Router();
-
-// Middleware de autenticação (verificar token JWT)
-const verificarAuth = async (req: any, res: any, next: any) => {
-  const token = req.headers.authorization?.split(' ')[1];
-  if (!token) {
-    return res.status(401).json({ success: false, erro: 'Token não fornecido' });
-  }
-  // Para fase 1, apenas verificar se tem um token
-  // Em produção, validar JWT aqui
-  req.usuarioId = 'placeholder'; // Será extraído do JWT em produção
-  next();
-};
 
 // GET /api/cantos - Listar cantos com filtros
 router.get('/', async (req, res) => {

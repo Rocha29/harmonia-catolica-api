@@ -1,20 +1,10 @@
 import { Router } from 'express';
 import { PrismaClient } from '@prisma/client';
 import crypto from 'crypto';
+import { verificarAuth } from '../middleware/auth';
 
 const prisma = new PrismaClient();
 const router = Router();
-
-// Middleware de autenticação
-const verificarAuth = async (req: any, res: any, next: any) => {
-  const token = req.headers.authorization?.split(' ')[1];
-  if (!token) {
-    return res.status(401).json({ success: false, erro: 'Token não fornecido' });
-  }
-  // Em produção, extrair usuarioId do JWT
-  req.usuarioId = 'placeholder';
-  next();
-};
 
 // Gerar link público único
 function gerarLinkPublico(): string {
@@ -22,7 +12,7 @@ function gerarLinkPublico(): string {
 }
 
 // POST /api/setlists - Criar nova setlist
-router.post('/', verificarAuth, async (req, res) => {
+router.post('/', verificarAuth, async (req: any, res: any) => {
   try {
     const {
       titulo,
@@ -52,7 +42,7 @@ router.post('/', verificarAuth, async (req, res) => {
         data: new Date(data),
         estilo,
         duracao: 0,
-        usuarioId: 'cmo3oupjp0000kmkr2crd2tcj', // Substituir com req.usuarioId em produção
+        usuarioId: req.usuarioId,
         grupoId: grupoId || null,
         linkPublico: gerarLinkPublico(),
       },
@@ -76,54 +66,7 @@ router.post('/', verificarAuth, async (req, res) => {
 });
 
 // GET /api/setlists/:id - Obter setlist por ID (com cantos)
-router.get('/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const setlist = await prisma.setlist.findUnique({
-      where: { id },
-      include: {
-        usuario: { select: { id: true, nome: true, email: true } },
-        grupo: { select: { id: true, nome: true } },
-        cantos: {
-          include: {
-            canto: {
-              select: {
-                id: true,
-                titulo: true,
-                compositor: true,
-                estilo: true,
-                tom: true,
-                duracao: true,
-                letra: true,
-                cifra: true,
-                momentoMissa: true,
-              },
-            },
-          },
-          orderBy: { ordem: 'asc' },
-        },
-      },
-    });
-
-    if (!setlist) {
-      return res.status(404).json({
-        success: false,
-        erro: 'Setlist não encontrada',
-      });
-    }
-
-    res.json({
-      success: true,
-      dados: setlist,
-    });
-  } catch (error) {
-    console.error('Erro ao buscar setlist:', error);
-    res.status(500).json({ success: false, erro: 'Erro ao buscar setlist' });
-  }
-});
-
-// GET /api/setlists/publica/:linkPublico - Acessar setlist por link público
+// GET /api/setlists/publica/:linkPublico - deve vir ANTES de /:id
 router.get('/publica/:linkPublico', async (req, res) => {
   try {
     const { linkPublico } = req.params;
@@ -140,22 +83,51 @@ router.get('/publica/:linkPublico', async (req, res) => {
     });
 
     if (!setlist) {
-      return res.status(404).json({
-        success: false,
-        erro: 'Setlist pública não encontrada',
-      });
+      return res.status(404).json({ success: false, erro: 'Setlist pública não encontrada' });
     }
 
-    // Contar compartilhamentos
     res.json({
       success: true,
       dados: setlist,
-      compartilhavel: true,
-      linkWhatsApp: `https://wa.me/?text=Confira%20esta%20Setlist:%20${process.env.FRONTEND_URL || 'http://localhost:3000'}/setlist/${linkPublico}`,
+      linkWhatsApp: `https://wa.me/?text=${encodeURIComponent(`Confira esta Setlist: ${process.env.FRONTEND_URL || 'http://localhost:3000'}/setlists/publica/${linkPublico}`)}`,
     });
   } catch (error) {
     console.error('Erro ao acessar setlist pública:', error);
     res.status(500).json({ success: false, erro: 'Erro ao acessar setlist' });
+  }
+});
+
+router.get('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const setlist = await prisma.setlist.findUnique({
+      where: { id },
+      include: {
+        usuario: { select: { id: true, nome: true, email: true } },
+        grupo: { select: { id: true, nome: true } },
+        cantos: {
+          include: {
+            canto: {
+              select: {
+                id: true, titulo: true, compositor: true, estilo: true,
+                tom: true, duracao: true, letra: true, cifra: true, momentoMissa: true,
+              },
+            },
+          },
+          orderBy: { ordem: 'asc' },
+        },
+      },
+    });
+
+    if (!setlist) {
+      return res.status(404).json({ success: false, erro: 'Setlist não encontrada' });
+    }
+
+    res.json({ success: true, dados: setlist });
+  } catch (error) {
+    console.error('Erro ao buscar setlist:', error);
+    res.status(500).json({ success: false, erro: 'Erro ao buscar setlist' });
   }
 });
 
@@ -416,7 +388,7 @@ router.put('/:id/cantos/:cantoId', verificarAuth, async (req, res) => {
 });
 
 // GET /api/setlists - Listar setlists do usuário (com paginação)
-router.get('/', verificarAuth, async (req, res) => {
+router.get('/', verificarAuth, async (req: any, res: any) => {
   try {
     const { page = '1', limit = '10' } = req.query;
     const pageNum = parseInt(page as string) || 1;
@@ -426,7 +398,7 @@ router.get('/', verificarAuth, async (req, res) => {
     const [setlists, total] = await Promise.all([
       prisma.setlist.findMany({
         where: {
-          usuarioId: 'cmo3oupjp0000kmkr2crd2tcj', // Substituir com req.usuarioId
+          usuarioId: req.usuarioId,
         },
         include: {
           cantos: { select: { canto: true } },
@@ -438,7 +410,7 @@ router.get('/', verificarAuth, async (req, res) => {
       }),
       prisma.setlist.count({
         where: {
-          usuarioId: 'cmo3oupjp0000kmkr2crd2tcj',
+          usuarioId: req.usuarioId,
         },
       }),
     ]);
