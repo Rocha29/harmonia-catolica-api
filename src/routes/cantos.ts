@@ -74,6 +74,57 @@ router.get('/', async (req, res) => {
   }
 });
 
+// GET /api/cantos/saude - Estatísticas de saúde do repertório (V2)
+router.get('/saude', async (_req, res) => {
+  try {
+    const [dominada, geladeira, nova, estudando, total] = await Promise.all([
+      prisma.canto.count({ where: { status: 'dominada' } }),
+      prisma.canto.count({ where: { status: 'geladeira' } }),
+      prisma.canto.count({ where: { status: 'nova' } }),
+      prisma.canto.count({ where: { status: 'estudando' } }),
+      prisma.canto.count(),
+    ]);
+    res.json({ success: true, dados: { dominada, geladeira, nova, estudando, total } });
+  } catch (error) {
+    res.status(500).json({ success: false, erro: 'Erro ao buscar saúde do repertório' });
+  }
+});
+
+// GET /api/cantos/deck - Deck de expansão: nova + geladeira + estudando (V2)
+router.get('/deck', async (_req, res) => {
+  try {
+    const cantos = await prisma.canto.findMany({
+      where: { status: { in: ['nova', 'geladeira', 'estudando'] } },
+      orderBy: [{ status: 'asc' }, { ultimaVez: 'asc' }],
+    });
+    res.json({ success: true, count: cantos.length, dados: cantos });
+  } catch (error) {
+    res.status(500).json({ success: false, erro: 'Erro ao buscar deck' });
+  }
+});
+
+// PATCH /api/cantos/:id/status - Atualizar status do canto (V2)
+router.patch('/:id/status', verificarAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    const permitidos = ['dominada', 'geladeira', 'nova', 'estudando'];
+    if (!permitidos.includes(status)) {
+      return res.status(400).json({ success: false, erro: 'Status inválido' });
+    }
+    const canto = await prisma.canto.update({
+      where: { id },
+      data: {
+        status,
+        ultimaVez: status === 'dominada' ? new Date() : undefined,
+      },
+    });
+    res.json({ success: true, dados: canto });
+  } catch (error) {
+    res.status(500).json({ success: false, erro: 'Erro ao atualizar status' });
+  }
+});
+
 // GET /api/cantos/:id - Obter um canto específico
 router.get('/:id', async (req, res) => {
   try {

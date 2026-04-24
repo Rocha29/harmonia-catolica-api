@@ -51,6 +51,9 @@ model Canto {
   tempoLiturgico  String? // JSON
   momentoMissa    String // "entrada", "gloria", "aleluia", "comunhao", "saida"
   notas           String?
+  // V2: Saúde do Repertório
+  status          String   @default("nova") // "dominada" | "geladeira" | "nova" | "estudando"
+  ultimaVez       DateTime?
   criadoEm        DateTime @default(now())
   atualizadoEm    DateTime @updatedAt
 
