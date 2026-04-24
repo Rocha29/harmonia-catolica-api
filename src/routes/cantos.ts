@@ -312,4 +312,57 @@ router.get('/filtros/momentos', async (req, res) => {
   }
 });
 
+// POST /api/cantos/importar-cifra — busca dados de uma música no Cifra Club pela URL
+router.post('/importar-cifra', verificarAuth, async (req: any, res: any) => {
+  const { url } = req.body;
+  if (!url || !url.includes('cifraclub.com.br')) {
+    return res.status(400).json({ success: false, erro: 'Informe uma URL válida do Cifra Club' });
+  }
+
+  try {
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; HarmoniaCatolica/1.0)',
+        'Accept': 'text/html',
+      },
+    });
+    if (!response.ok) throw new Error('Não foi possível acessar a página');
+    const html = await response.text();
+
+    // Extrair título (og:title ou h1.t1)
+    const ogTitle = html.match(/<meta property="og:title" content="([^"]+)"/)?.[1] ?? '';
+    const h1Match = html.match(/<h1[^>]*class="[^"]*t1[^"]*"[^>]*>([^<]+)</)?.[1] ?? '';
+    const titulo = h1Match || ogTitle.split(' - ')[0] || 'Título não encontrado';
+
+    // Extrair compositor/artista
+    const artistaMeta = html.match(/<meta[^>]*name="author"[^>]*content="([^"]+)"/)?.[1] ?? '';
+    const artistaH2 = html.match(/<h2[^>]*class="[^"]*artist[^"]*"[^>]*><a[^>]*>([^<]+)<\/a>/)?.[1] ?? '';
+    const compositor = artistaH2 || artistaMeta || ogTitle.split(' - ')[1] || '';
+
+    // Extrair cifra (conteúdo do <pre> principal)
+    const preMatches = html.match(/<pre[^>]*>([\s\S]*?)<\/pre>/gi) ?? [];
+    const cifra = preMatches
+      .map((p: string) => p.replace(/<[^>]+>/g, ''))
+      .join('\n\n')
+      .trim()
+      .slice(0, 10000);
+
+    // Tom (ex: "Tom: Am" ou "cifra em Am")
+    const tomMatch = html.match(/[Tt]om[:\s]+([A-G][b#]?m?)/)?.[1] ?? '';
+
+    res.json({
+      success: true,
+      dados: {
+        titulo,
+        compositor,
+        cifra,
+        tom: tomMatch,
+        linkOrigem: url,
+      },
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, erro: 'Erro ao buscar cifra: ' + err.message });
+  }
+});
+
 export default router;

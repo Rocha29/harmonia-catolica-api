@@ -14,11 +14,13 @@ const authRouter = require('./routes/auth').default;
 const calendarioRouter = require('./routes/calendario').default;
 const cantosRouter = require('./routes/cantos').default;
 const setlistsRouter = require('./routes/setlists').default;
+const ministeriosRouter = require('./routes/ministerios').default;
 
 app.use('/api/auth', authRouter);
 app.use('/api/calendario', calendarioRouter);
 app.use('/api/cantos', cantosRouter);
 app.use('/api/setlists', setlistsRouter);
+app.use('/api/ministerios', ministeriosRouter);
 
 // Health check endpoint
 app.get('/api/health', (req: any, res: any) => {

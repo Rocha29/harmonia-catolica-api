@@ -30,6 +30,8 @@ model Usuario {
   setlists        Setlist[]
   favoritos       Canto[] @relation("FavoritoCantos")
   avaliacoes      AvaliacaoCanto[]
+  ministerios     Ministerio[]
+  amens           MinisterioVideoAmem[]
 }
 
 // ====== CANTOS ======
@@ -157,6 +159,58 @@ model DiaLiturgico {
   cantosCarismatico String? // JSON array
   criadoEm        DateTime @default(now())
   atualizadoEm    DateTime @updatedAt
+}
+
+// ====== MINISTERIOS ======
+model Ministerio {
+  id           String @id @default(cuid())
+  nome         String
+  paroquia     String
+  cidade       String?
+  estado       String?
+  descricao    String?
+  foto         String?
+  ativo        Boolean @default(true)
+  usuario      Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  usuarioId    String
+  criadoEm    DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  eventos      MinisterioEvento[]
+  videos       MinisterioVideo[]
+}
+
+model MinisterioEvento {
+  id           String @id @default(cuid())
+  ministerio   Ministerio @relation(fields: [ministerioId], references: [id], onDelete: Cascade)
+  ministerioId String
+  titulo       String
+  data         DateTime
+  local        String?
+  descricao    String?
+  criadoEm    DateTime @default(now())
+}
+
+model MinisterioVideo {
+  id           String @id @default(cuid())
+  ministerio   Ministerio @relation(fields: [ministerioId], references: [id], onDelete: Cascade)
+  ministerioId String
+  url          String
+  titulo       String
+  criadoEm    DateTime @default(now())
+
+  amens        MinisterioVideoAmem[]
+}
+
+model MinisterioVideoAmem {
+  id        String @id @default(cuid())
+  video     MinisterioVideo @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  videoId   String
+  usuario   Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  usuarioId String
+  criadoEm  DateTime @default(now())
+
+  @@unique([videoId, usuarioId])
 }
 
 // ====== MARKETPLACE (Phase 3+) ======
