@@ -15,12 +15,14 @@ const calendarioRouter = require('./routes/calendario').default;
 const cantosRouter = require('./routes/cantos').default;
 const setlistsRouter = require('./routes/setlists').default;
 const ministeriosRouter = require('./routes/ministerios').default;
+const leiturasRouter    = require('./routes/leituras').default;
 
 app.use('/api/auth', authRouter);
 app.use('/api/calendario', calendarioRouter);
 app.use('/api/cantos', cantosRouter);
 app.use('/api/setlists', setlistsRouter);
 app.use('/api/ministerios', ministeriosRouter);
+app.use('/api/leituras', leiturasRouter);
 
 // Health check endpoint
 app.get('/api/health', (req: any, res: any) => {
